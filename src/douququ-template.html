@@ -1,0 +1,471 @@
+<title>电子斗蛐蛐 · 两个人一部手机当场决斗</title>
+<style>
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  src: url(data:font/woff2;base64,%%PLEX600%%) format('woff2');
+}
+:root {
+  --bg: #14161c;
+  --panel: #1d2027;
+  --line: #31353f;
+  --ink: #f1efe8;
+  --dim: #9aa0ab;
+  --faint: #5f646e;
+  --red: #c8404f;
+  --red-deep: #8f2e3a;
+  --blue: #3878c2;
+  --blue-deep: #2a5a8f;
+  --gold: #e8b64c;
+  --mono: 'IBM Plex Mono', Consolas, monospace;
+  --hanzi: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--hanzi); font-size: 15px; line-height: 1.6;
+  height: 100dvh; display: flex; flex-direction: column;
+  overflow: hidden; -webkit-font-smoothing: antialiased;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+/* ---------- arena ---------- */
+.zone {
+  flex: 1; position: relative; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  -webkit-tap-highlight-color: transparent; cursor: pointer; overflow: hidden;
+  transition: background 0.12s;
+}
+#zoneA { transform: rotate(180deg); background: rgba(200, 64, 79, 0.10); }
+#zoneB { background: rgba(56, 120, 194, 0.10); }
+.zone.armed-red { background: rgba(200, 64, 79, 0.55); }
+.zone.armed-green { background: rgba(70, 160, 90, 0.6); }
+.zone.win-flash { background: rgba(232, 182, 76, 0.55); }
+.zone.lose-flash { background: rgba(40, 42, 50, 0.9); }
+.zone .cue { font-size: 24px; font-weight: 800; letter-spacing: 0.1em; text-align: center; padding: 0 20px; pointer-events: none; }
+.zone .sub { font-size: 13px; color: rgba(241, 239, 232, 0.75); pointer-events: none; text-align: center; }
+.zone .tapcount { font-family: var(--mono); font-size: 44px; font-weight: 600; pointer-events: none; }
+
+/* ---------- center strip ---------- */
+.mid {
+  flex: none; height: 64px; background: var(--panel);
+  border-top: 1.5px solid var(--line); border-bottom: 1.5px solid var(--line);
+  display: flex; align-items: center; justify-content: center; gap: 18px;
+  position: relative; z-index: 5;
+}
+.score { font-family: var(--mono); font-size: 26px; font-weight: 600; }
+.score .a { color: var(--red); }
+.score .b { color: var(--blue); }
+.round-tag { font-size: 12px; color: var(--faint); letter-spacing: 0.15em; font-family: var(--mono); }
+
+/* ---------- overlays ---------- */
+.mask {
+  position: fixed; inset: 0; z-index: 40; background: rgba(20, 22, 28, 0.94);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; text-align: center; padding: 24px;
+}
+.mask.hide { display: none; }
+.mask h1 { margin: 0; font-size: 34px; letter-spacing: 0.12em; font-weight: 800; }
+.mask h1 b { color: var(--gold); }
+.mask .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em; color: var(--faint); text-transform: uppercase; }
+.mask .rules { font-size: 13.5px; color: var(--dim); line-height: 2; }
+.mask .rules b { color: var(--ink); }
+.btn-go {
+  font-family: var(--hanzi); font-weight: 800; font-size: 16px; letter-spacing: 0.2em;
+  border: none; border-radius: 999px; cursor: pointer; padding: 14px 44px;
+  background: linear-gradient(135deg, #f0c56a, #d99a2b); color: #241703;
+}
+.names-row { display: flex; gap: 10px; }
+.names-row input {
+  width: 130px; background: var(--panel); border: 1.5px solid var(--line); border-radius: 999px;
+  color: var(--ink); font-family: var(--hanzi); font-size: 13px; padding: 8px 14px;
+  outline: none; text-align: center;
+}
+.names-row input:focus { border-color: var(--gold); }
+.mask .foot-links { font-size: 12px; color: var(--faint); margin-top: 6px; }
+.mask .foot-links a { color: var(--dim); }
+
+/* report */
+.report-box {
+  background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 18px; text-align: center; max-width: 340px; width: 100%;
+}
+.report-box img { width: 100%; border-radius: 8px; display: block; }
+.report-btns { display: flex; gap: 8px; margin-top: 12px; }
+.report-btns button {
+  flex: 1; padding: 11px 0; border-radius: 8px; font-family: var(--hanzi); font-size: 14px;
+  font-weight: 700; cursor: pointer; border: none;
+}
+.btn-retry { background: linear-gradient(135deg, #f0c56a, #d99a2b); color: #241703; }
+.btn-save2 { background: none; color: var(--dim); border: 1.5px solid var(--line) !important; }
+.share-row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+.share-row button {
+  font-family: var(--hanzi); font-size: 12px; color: var(--dim);
+  background: none; border: 1.5px solid var(--line); border-radius: 999px;
+  padding: 5px 14px; cursor: pointer;
+}
+.share-toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+  background: var(--panel); border: 1.5px solid var(--gold); color: var(--gold);
+  font-size: 13px; padding: 8px 20px; border-radius: 999px; z-index: 90;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.share-toast.show { opacity: 1; }
+</style>
+
+<div class="zone" id="zoneA">
+  <div class="cue" id="cueA">红方</div>
+  <div class="sub" id="subA"></div>
+  <div class="tapcount" id="tapA"></div>
+</div>
+<div class="mid">
+  <span class="score"><span class="a" id="scoreA">0</span> : <span class="b" id="scoreB">0</span></span>
+  <span class="round-tag" id="round-tag">五局三胜</span>
+</div>
+<div class="zone" id="zoneB">
+  <div class="cue" id="cueB">蓝方</div>
+  <div class="sub" id="subB"></div>
+  <div class="tapcount" id="tapB"></div>
+</div>
+
+<div class="mask" id="start-mask">
+  <div class="eyebrow">Pocket Duel · Best of 5</div>
+  <h1>电子<b>斗蛐蛐</b></h1>
+  <p class="rules">
+    两个人,一部手机,平放桌上,各占半边屏。<br>
+    <b>抢绿灯</b>:红灯憋住,绿灯抢拍,抢跑判负<br>
+    <b>连点大战</b>:3 秒内看谁点得多<br>
+    <b>放手快</b>:都按住别动,见「放!」先松手者胜<br>
+    五局三胜,输的人自觉扫码点奶茶。
+  </p>
+  <div class="names-row">
+    <input id="in-a" maxlength="6" placeholder="红方名号(可选)">
+    <input id="in-b" maxlength="6" placeholder="蓝方名号(可选)">
+  </div>
+  <button class="btn-go" id="btn-go">开 斗</button>
+  <p class="foot-links"><a href="https://github.com/narra-data/douququ">开源</a> · 更多沙雕:<a href="https://narra-data.github.io/xiaban/">大声下班</a> · <a href="https://narra-data.github.io/zhu-zhiliao/">电子竹知了</a></p>
+</div>
+
+<div class="mask hide" id="report-mask">
+  <div class="report-box">
+    <img id="report-img" alt="决斗战报">
+    <div class="report-btns">
+      <button class="btn-retry" id="btn-retry">再斗一场</button>
+      <button class="btn-save2" id="btn-save-report">保存战报</button>
+    </div>
+    <div class="share-row">
+      <button id="sh-copy">复制链接</button>
+      <button id="sh-native" hidden>转发</button>
+    </div>
+  </div>
+</div>
+<div class="share-toast" id="share-toast">已复制 ✓</div>
+
+<script>
+'use strict';
+/* ================= sound ================= */
+let AC = null, muted = false;
+function beep(f, d, v, when, type) {
+  if (muted) return;
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  if (AC.state === 'suspended') AC.resume();
+  const t = AC.currentTime + (when || 0);
+  const o = AC.createOscillator(); o.type = type || 'square'; o.frequency.value = f;
+  const g = AC.createGain();
+  g.gain.setValueAtTime(v || 0.12, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + d);
+  o.connect(g); g.connect(AC.destination);
+  o.start(t); o.stop(t + d + 0.02);
+}
+
+/* ================= match state ================= */
+const M = {
+  nameA: '红方', nameB: '蓝方',
+  scoreA: 0, scoreB: 0, round: 0,
+  phase: 'idle',      // idle|banner|wait|go|tap|hold|holdgo|result|over
+  type: null,          // 'green'|'taps'|'release'
+  goTime: 0, timers: [],
+  tapsA: 0, tapsB: 0,
+  holdA: false, holdB: false,
+  reactions: { A: [], B: [] },
+  falseStarts: { A: 0, B: 0 },
+  log: [],
+};
+const els = {
+  zA: document.getElementById('zoneA'), zB: document.getElementById('zoneB'),
+  cA: document.getElementById('cueA'), cB: document.getElementById('cueB'),
+  sA: document.getElementById('subA'), sB: document.getElementById('subB'),
+  tA: document.getElementById('tapA'), tB: document.getElementById('tapB'),
+  scA: document.getElementById('scoreA'), scB: document.getElementById('scoreB'),
+  tag: document.getElementById('round-tag'),
+};
+function T(fn, ms) { M.timers.push(setTimeout(fn, ms)); }
+function clearTimers() { M.timers.forEach(clearTimeout); M.timers = []; }
+function setCue(a, b, subA, subB) {
+  els.cA.textContent = a; els.cB.textContent = b;
+  els.sA.textContent = subA || ''; els.sB.textContent = subB || '';
+}
+function zoneClass(cls) {
+  els.zA.className = 'zone' + (cls ? ' ' + cls : '');
+  els.zB.className = 'zone' + (cls ? ' ' + cls : '');
+  els.zA.id && (els.zA.id = 'zoneA'); els.zB.id && (els.zB.id = 'zoneB');
+}
+function updScore() {
+  els.scA.textContent = M.scoreA; els.scB.textContent = M.scoreB;
+  els.tag.textContent = '第 ' + (M.round) + ' 局 · 五局三胜';
+}
+
+/* ================= round flow ================= */
+const TYPES = ['green', 'taps', 'release'];
+function pickType() {
+  // ensure variety: cycle through shuffled bag
+  if (!M.bag || !M.bag.length) M.bag = [...TYPES].sort(() => Math.random() - 0.5);
+  return M.bag.pop();
+}
+function startMatch() {
+  M.scoreA = 0; M.scoreB = 0; M.round = 0;
+  M.reactions = { A: [], B: [] };
+  M.falseStarts = { A: 0, B: 0 };
+  M.log = []; M.bag = null;
+  nextRound();
+}
+function nextRound() {
+  clearTimers();
+  M.round++;
+  M.type = pickType();
+  M.phase = 'banner';
+  updScore();
+  zoneClass('');
+  els.tA.textContent = ''; els.tB.textContent = '';
+  const intro = {
+    green: ['抢绿灯', '红灯憋住 · 绿灯抢拍 · 抢跑判负'],
+    taps: ['连点大战', '3 秒 · 往死里点'],
+    release: ['放手快', '按住别动 · 见「放!」先松手'],
+  }[M.type];
+  setCue('第' + M.round + '局 · ' + intro[0], '第' + M.round + '局 · ' + intro[0], intro[1], intro[1]);
+  beep(520, 0.08, 0.1); beep(660, 0.08, 0.1, 0.12);
+  T(() => {
+    if (M.type === 'green') startGreen();
+    else if (M.type === 'taps') startTaps();
+    else startRelease();
+  }, 1900);
+}
+/* --- green light --- */
+function startGreen() {
+  M.phase = 'wait';
+  zoneClass('armed-red');
+  setCue('红灯…', '红灯…', '手别抖', '手别抖');
+  T(() => {
+    M.phase = 'go';
+    M.goTime = performance.now();
+    zoneClass('armed-green');
+    setCue('拍!!', '拍!!');
+    beep(880, 0.12, 0.16);
+  }, 1200 + Math.random() * 2600);
+}
+/* --- taps --- */
+function startTaps() {
+  M.tapsA = 0; M.tapsB = 0;
+  M.phase = 'wait';
+  setCue('预备……', '预备……');
+  T(() => {
+    M.phase = 'tap';
+    M.goTime = performance.now();
+    setCue('点!!!', '点!!!');
+    els.tA.textContent = '0'; els.tB.textContent = '0';
+    beep(880, 0.1, 0.15);
+    T(() => {
+      M.phase = 'result';
+      if (M.tapsA === M.tapsB) { tieRound('平手!都是 ' + M.tapsA + ' 下,再来'); return; }
+      roundWin(M.tapsA > M.tapsB ? 'A' : 'B', '连点 ' + Math.max(M.tapsA, M.tapsB) + ' vs ' + Math.min(M.tapsA, M.tapsB));
+    }, 3000);
+  }, 1300 + Math.random() * 1200);
+}
+/* --- release --- */
+function startRelease() {
+  M.holdA = false; M.holdB = false;
+  M.phase = 'hold';
+  setCue('按住你这半边!', '按住你这半边!', '两边都按住才开始', '两边都按住才开始');
+}
+function releaseArmed() {
+  setCue('别动……', '别动……', '谁先松「放」前的手,谁输', '谁先松「放」前的手,谁输');
+  zoneClass('armed-red');
+  T(() => {
+    M.phase = 'holdgo';
+    M.goTime = performance.now();
+    zoneClass('armed-green');
+    setCue('放!!', '放!!');
+    beep(880, 0.12, 0.16);
+  }, 1500 + Math.random() * 2800);
+}
+/* --- results --- */
+function roundWin(who, note) {
+  M.phase = 'result';
+  clearTimers();
+  const name = who === 'A' ? M.nameA : M.nameB;
+  if (who === 'A') { M.scoreA++; els.zA.classList.add('win-flash'); els.zB.classList.add('lose-flash'); }
+  else { M.scoreB++; els.zB.classList.add('win-flash'); els.zA.classList.add('lose-flash'); }
+  M.log.push([M.round, who, note]);
+  setCue(who === 'A' ? '你赢了这局!' : '这局丢了…', who === 'B' ? '你赢了这局!' : '这局丢了…', note, note);
+  beep(660, 0.1, 0.14); beep(990, 0.14, 0.14, 0.1);
+  updScore();
+  T(() => {
+    if (M.scoreA >= 3 || M.scoreB >= 3) endMatch();
+    else nextRound();
+  }, 1800);
+}
+function tieRound(note) {
+  setCue('平手!', '平手!', note, note);
+  M.round--;
+  T(nextRound, 1500);
+}
+function endMatch() {
+  M.phase = 'over';
+  renderReport();
+  document.getElementById('report-img').src = rp.toDataURL('image/png');
+  document.getElementById('report-mask').classList.remove('hide');
+}
+
+/* ================= input ================= */
+function zoneDown(who) {
+  if (M.phase === 'wait' && M.type === 'green') {
+    // false start
+    M.falseStarts[who]++;
+    roundWin(who === 'A' ? 'B' : 'A', (who === 'A' ? M.nameA : M.nameB) + ' 抢跑,当场判负');
+    return;
+  }
+  if (M.phase === 'go' && M.type === 'green') {
+    const ms = performance.now() - M.goTime;
+    M.reactions[who].push(ms);
+    roundWin(who, '反应 ' + ms.toFixed(0) + ' 毫秒');
+    return;
+  }
+  if (M.phase === 'tap') {
+    if (who === 'A') { M.tapsA++; els.tA.textContent = M.tapsA; }
+    else { M.tapsB++; els.tB.textContent = M.tapsB; }
+    return;
+  }
+  if (M.phase === 'hold' && M.type === 'release') {
+    if (who === 'A') M.holdA = true; else M.holdB = true;
+    setCue(M.holdA ? '按住了 ✓' : '按住你这半边!', M.holdB ? '按住了 ✓' : '按住你这半边!');
+    if (M.holdA && M.holdB) { M.phase = 'holdwait'; releaseArmed(); }
+  }
+}
+function zoneUp(who) {
+  if (M.type !== 'release') return;
+  if (M.phase === 'holdwait') {
+    roundWin(who === 'A' ? 'B' : 'A', (who === 'A' ? M.nameA : M.nameB) + ' 手滑松早了,判负');
+    return;
+  }
+  if (M.phase === 'holdgo') {
+    const ms = performance.now() - M.goTime;
+    M.reactions[who].push(ms);
+    roundWin(who, '松手 ' + ms.toFixed(0) + ' 毫秒');
+  }
+}
+els.zA.addEventListener('pointerdown', e => { e.preventDefault(); zoneDown('A'); });
+els.zB.addEventListener('pointerdown', e => { e.preventDefault(); zoneDown('B'); });
+els.zA.addEventListener('pointerup', () => zoneUp('A'));
+els.zB.addEventListener('pointerup', () => zoneUp('B'));
+
+/* ================= report card ================= */
+const WIN_TITLES = ['本桌蛐蛐王', '建议出道打电竞', '反应遗传学奇迹', '手速已受官方认证'];
+const LOSE_TITLES = ['手速已被没收', '反射弧绕地球一圈', '输给了自己的抢跑', '奶茶买单侠'];
+const rp = document.createElement('canvas');
+rp.width = 1080; rp.height = 1440;
+function renderReport() {
+  const c = rp.getContext('2d');
+  const W = 1080, H = 1440;
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#14161c'); g.addColorStop(1, '#221a20');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.textAlign = 'center';
+  c.fillStyle = '#5f646e'; c.font = '600 28px Consolas, monospace';
+  c.fillText('POCKET DUEL · BATTLE REPORT', W / 2, 110);
+  c.fillStyle = '#f1efe8'; c.font = '800 68px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillText('电子斗蛐蛐 · 战报', W / 2, 200);
+  // score
+  const aWin = M.scoreA > M.scoreB;
+  c.font = '800 170px Consolas, monospace';
+  c.fillStyle = '#c8404f'; c.fillText(String(M.scoreA), W / 2 - 190, 400);
+  c.fillStyle = '#5f646e'; c.fillText(':', W / 2, 390);
+  c.fillStyle = '#3878c2'; c.fillText(String(M.scoreB), W / 2 + 190, 400);
+  c.font = '44px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillStyle = '#c8404f'; c.fillText(M.nameA, W / 2 - 190, 470);
+  c.fillStyle = '#3878c2'; c.fillText(M.nameB, W / 2 + 190, 470);
+  // winner chip
+  const seed = (M.scoreA * 7 + M.scoreB * 13 + M.round) % 4;
+  const winName = aWin ? M.nameA : M.nameB;
+  const loseName = aWin ? M.nameB : M.nameA;
+  c.fillStyle = '#e8b64c';
+  c.beginPath(); c.roundRect((W - 640) / 2, 530, 640, 96, 48); c.fill();
+  c.fillStyle = '#241703'; c.font = '800 44px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillText(winName + ' · 「' + WIN_TITLES[seed] + '」', W / 2, 594);
+  c.fillStyle = '#9aa0ab'; c.font = '36px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillText(loseName + ' 荣获「' + LOSE_TITLES[(seed + 1) % 4] + '」', W / 2, 690);
+  // round log
+  c.font = '30px "PingFang SC","Microsoft YaHei",sans-serif';
+  M.log.slice(0, 5).forEach((r, i) => {
+    const y = 780 + i * 56;
+    c.fillStyle = r[1] === 'A' ? '#c8404f' : '#3878c2';
+    c.textAlign = 'left';
+    c.fillText('第' + r[0] + '局 · ' + (r[1] === 'A' ? M.nameA : M.nameB) + ' 胜', 150, y);
+    c.fillStyle = '#9aa0ab';
+    c.fillText(r[2], 480, y);
+  });
+  c.textAlign = 'center';
+  // best reaction
+  const all = [...M.reactions.A, ...M.reactions.B];
+  if (all.length) {
+    const best = Math.min(...all);
+    c.fillStyle = '#f1efe8'; c.font = '600 34px "PingFang SC","Microsoft YaHei",sans-serif';
+    c.fillText('全场最快反应 ' + best.toFixed(0) + ' 毫秒' +
+      (M.falseStarts.A + M.falseStarts.B > 0 ? ' · 抢跑 ' + (M.falseStarts.A + M.falseStarts.B) + ' 次(丢人)' : ''), W / 2, 1120);
+  }
+  c.fillStyle = '#e8b64c'; c.font = '600 36px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillText('输的人,奶茶该点了', W / 2, 1210);
+  c.fillStyle = '#9aa0ab'; c.font = '28px Consolas, monospace';
+  c.fillText('narra-data.github.io/douququ', W / 2, 1270);
+  c.fillStyle = '#5f646e'; c.font = '24px "PingFang SC","Microsoft YaHei",sans-serif';
+  c.fillText('电子斗蛐蛐 · 两个人一部手机当场决斗 · 五局三胜', W / 2, 1330);
+}
+
+/* ================= ui wiring ================= */
+document.getElementById('btn-go').addEventListener('click', () => {
+  M.nameA = document.getElementById('in-a').value.trim() || '红方';
+  M.nameB = document.getElementById('in-b').value.trim() || '蓝方';
+  document.getElementById('start-mask').classList.add('hide');
+  beep(440, 0.08, 0.1);
+  startMatch();
+});
+document.getElementById('btn-retry').addEventListener('click', () => {
+  document.getElementById('report-mask').classList.add('hide');
+  startMatch();
+});
+document.getElementById('btn-save-report').addEventListener('click', () => {
+  if (/MicroMessenger/i.test(navigator.userAgent)) { toast('请长按战报图片保存'); return; }
+  const a = document.createElement('a');
+  a.download = '斗蛐蛐战报_' + M.scoreA + 'v' + M.scoreB + '.png';
+  a.href = rp.toDataURL('image/png');
+  a.click();
+});
+let toastTimer = null;
+function toast(m) {
+  const el = document.getElementById('share-toast');
+  el.textContent = m; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+const URL0 = 'https://narra-data.github.io/douququ/';
+const S_TEXT = '「电子斗蛐蛐」两个人一部手机当场决斗🦗抢绿灯/连点大战/放手快,五局三胜,输的点奶茶。找个人来斗:';
+document.getElementById('sh-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(S_TEXT + ' ' + URL0); toast('已复制,去下战书 ✓'); }
+  catch (e) { prompt('复制链接:', S_TEXT + ' ' + URL0); }
+});
+const nat = document.getElementById('sh-native');
+if (navigator.share) {
+  nat.hidden = false;
+  nat.addEventListener('click', () =>
+    navigator.share({ title: '电子斗蛐蛐', text: S_TEXT, url: URL0 }).catch(() => {}));
+}
+</script>
